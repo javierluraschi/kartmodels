@@ -88,15 +88,13 @@ image_generator <- function(path, batch_size) {
       images <- c(images, array(png::readPNG(image_file), c(1L, 32L, 32L, 3L)))
 
       label <- rep(0, 3)
-      label[which(labels == "forward")] <- 1
+      label[which(classes == image_label)] <- 1
       labels <- c(labels, label)
 
       if (is.null(actual_previous))
         previous <- c(previous, array(rep(0,3), c(3)))
       else
         previous <- c(previous, actual_previous)
-
-      # previous <- c(previous, label)
 
       actual_previous <- label
     }
