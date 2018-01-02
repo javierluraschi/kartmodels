@@ -7,30 +7,30 @@ model <- keras_model_sequential()
 model %>%
   # Start with hidden 2D convolutional layer being fed 32x32 pixel images
   layer_conv_2d(
-    filter = 32, kernel_size = c(3,3), padding = "same", 
+    filter = 32, kernel_size = c(3,3), padding = "same",
     input_shape = c(32, 32, 3)
   ) %>%
   layer_activation("relu") %>%
-  
+
   # Second hidden layer
   layer_conv_2d(filter = 32, kernel_size = c(3,3)) %>%
   layer_activation("relu") %>%
-  
+
   # Use max pooling
   layer_max_pooling_2d(pool_size = c(2,2)) %>%
   layer_dropout(0.25) %>%
-  
+
   # 2 additional hidden 2D convolutional layers
   layer_conv_2d(filter = 32, kernel_size = c(3,3), padding = "same") %>%
   layer_activation("relu") %>%
   layer_conv_2d(filter = 32, kernel_size = c(3,3)) %>%
   layer_activation("relu") %>%
-  
+
   # Use max pooling once more
   layer_max_pooling_2d(pool_size = c(2,2)) %>%
   layer_dropout(0.25) %>%
-  
-  # Flatten max filtered output into feature vector 
+
+  # Flatten max filtered output into feature vector
   # and feed into dense layer
   layer_flatten() %>%
   layer_dense(512) %>%
@@ -78,8 +78,8 @@ model %>% fit_generator(
     classes = classes,
     batch_size = batch_size,
     target_size = c(32, 32)),
-  steps_per_epoch = as.integer(length(dir(train_path, recursive = T)) / batch_size), 
-  epochs = 5,
+  steps_per_epoch = as.integer(length(dir(train_path, recursive = T)) / batch_size),
+  epochs = 2,
   validation_data = flow_images_from_directory(
     test_path,
     classes = classes,

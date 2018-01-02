@@ -1,74 +1,65 @@
----
-title: "kartmodels: Kart simulation training models"
-output:
-  github_document:
-    fig_width: 7
-    fig_height: 5
----
+kartmodels: Kart simulation training models
+================
 
 This project makes use of `kartsim` to explore multiple training models.
 
-## Capturing Data
+Capturing Data
+--------------
 
-We will use the `kartsim` package and `kartsim_capture()` to capture training and
-test data to train the models in this repo.
+We will use the `kartsim` package and `kartsim_capture()` to capture training and test data to train the models in this repo.
 
-1. Capture training data using:
+1.  Capture training data using:
 
-```{r eval=FALSE}
+``` r
 library(kartsim)
 kartsim_capture("capture/train")
 ```
 
-2. Followed by test data with:
+1.  Followed by test data with:
 
-```{r eval=FALSE}
+``` r
 kartsim_capture("capture/test")
 ```
 
-## Training using the CIFAR model
+Training using the CIFAR model
+------------------------------
 
-We will first try modeling this as an image classification problem using the
-[cifar10_cnn](https://tensorflow.rstudio.com/keras/articles/examples/cifar10_cnn.html)
-Keras example.
+We will first try modeling this as an image classification problem using the [cifar10\_cnn](https://tensorflow.rstudio.com/keras/articles/examples/cifar10_cnn.html) Keras example.
 
-```{r eval=FALSE}
+``` r
 tfruns::training_run("models/tf-cifar.R")
 ```
 
 or in `cloudml` runnning:
 
-```{r eval=FALSE}
+``` r
 cloudml::cloudml_train("models/tf-cifar.R")
 ```
 
 use `tfdeploy` to validate that predictions over the trained model work by running:
 
-```{r eval=F}
+``` r
 tfdeploy::predict_savedmodel(list(array(0, c(32,32,3))))
 ```
-```
-$predictions
-                  output
-1 0.3322, 0.3316, 0.3363
-```
 
-Notice that `predict_savedmodel()` initializes a tensorflow session for each
-prediction, which takes too long:
+    $predictions
+                      output
+    1 0.3322, 0.3316, 0.3363
 
-```{r eval=F}
+Notice that `predict_savedmodel()` initializes a tensorflow session for each prediction, which takes too long:
+
+``` r
 system.time(
   tfdeploy::predict_savedmodel(list(array(0, c(32,32,3))))
 )
 ```
-```
-   user  system elapsed 
-  2.007   0.045   2.027 
-```
+
+       user  system elapsed 
+      2.007   0.045   2.027 
 
 Instead, we can preload the model and predict over a `graph` object as follows:
 
-```{r eval=F}
+``` r
 sess <- tensorflow::tf$Session()
 graph <- tfdeploy::load_savedmodel(sess)
 
@@ -76,14 +67,13 @@ system.time(
   tfdeploy::predict_savedmodel(list(array(0, c(32,32,3))), graph, type = "graph", sess = sess)
 )
 ```
-```
-   user  system elapsed 
-  0.027   0.001   0.025
-```
+
+       user  system elapsed 
+      0.027   0.001   0.025
 
 Which we can use to control the kart based on this model:
 
-```{r eval=F}
+``` r
 kartsim::kartsim_control(function(image, direction) {
   labels <- c("left", "forward", "right")
   input <- array(png::readPNG(image), c(32,32,3))
@@ -94,22 +84,20 @@ kartsim::kartsim_control(function(image, direction) {
 })
 ```
 
-```
-517/517 [==============================] - 54s 105ms/step - loss: 6.4093 - acc: 0.6013 - val_loss: 5.4995 - val_acc: 0.6588
-Epoch 2/2
-517/517 [==============================] - 55s 107ms/step - loss: 6.3691 - acc: 0.6048 - val_loss: 5.5059 - val_acc: 0.6577
-```
+    517/517 [==============================] - 54s 105ms/step - loss: 6.4093 - acc: 0.6013 - val_loss: 5.4995 - val_acc: 0.6588
+    Epoch 2/2
+    517/517 [==============================] - 55s 107ms/step - loss: 6.3691 - acc: 0.6048 - val_loss: 5.5059 - val_acc: 0.6577
 
-## Improving the CIFAR model with context
+Improving the CIFAR model with context
+--------------------------------------
 
-In order to improve accuracy, we can consider making the model "remember" the
-state of the previous direction to help give continuity while steering.
+In order to improve accuracy, we can consider making the model "remember" the state of the previous direction to help give continuity while steering.
 
-```{r eval=FALSE}
+``` r
 tfruns::training_run("models/tf-cifar-prev.R")
 ```
 
-```{r eval=F}
+``` r
 library(tensorflow)
 sess <- tensorflow::tf$Session()
 graph <- tfdeploy::load_savedmodel(sess, "savedmodel/")
@@ -126,16 +114,13 @@ tfdeploy::predict_savedmodel(
   sess = sess)
 ```
 
-```
-$predictions
-            activation_6
-1 0.0462, 0.9226, 0.0312
-```
+    $predictions
+                activation_6
+    1 0.0462, 0.9226, 0.0312
 
 We can apply this control policy as follows:
 
-```{r eval=F}
-
+``` r
 previous <- c(0,0,0)
 control_cifar_prev <- function(image, direction) {
   labels <- c("left", "forward", "right")
