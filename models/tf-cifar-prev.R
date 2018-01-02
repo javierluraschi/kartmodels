@@ -35,11 +35,6 @@ image_layer <- input_layer %>%
   layer_flatten() %>%
   layer_dropout(0.2) %>%
 
-  # and feed into dense layer
-  layer_dense(64) %>%
-  layer_activation("relu") %>%
-  layer_dropout(0.2)
-
 # Inject last known direction as a feature
 predictions_output <- layer_concatenate(
     c(
@@ -47,6 +42,14 @@ predictions_output <- layer_concatenate(
       previous_layer
     )
   ) %>%
+
+  layer_dense(64) %>%
+  layer_activation("relu") %>%
+  layer_dropout(0.2) %>%
+
+  layer_dense(10) %>%
+  layer_activation("relu") %>%
+  layer_dropout(0.2) %>%
 
   # Outputs from dense layer are projected onto 3 unit output layer
   layer_dense(3) %>%
@@ -100,7 +103,7 @@ image_generator <- function(path, batch_size) {
     }
 
     images_tensor <- array(images, c(batch_size, 32L, 32L, 3L))
-    previous_tensor <- array(labels, c(batch_size, 3L))
+    previous_tensor <- array(previous, c(batch_size, 3L))
     labels_tensor <- array(labels, c(batch_size, 3L))
 
     list(list(input = images_tensor, previous = previous_tensor), labels_tensor)
