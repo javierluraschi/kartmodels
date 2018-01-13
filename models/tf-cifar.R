@@ -78,7 +78,7 @@ model %>% fit_generator(
     batch_size = batch_size,
     target_size = c(32, 32)),
   steps_per_epoch = max(1, as.integer(length(dir(train_path, recursive = T)) / batch_size)),
-  epochs = 20,
+  epochs = 2,
   validation_data = flow_images_from_directory(
     test_path,
     classes = classes,
