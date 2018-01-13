@@ -17,13 +17,13 @@ test data to train the models in this repo.
 
 ```{r eval=FALSE}
 library(kartsim)
-kartsim_capture("capture/train")
+kartsim_capture("capture/train", circuit = 3)
 ```
 
 2. Followed by test data with:
 
 ```{r eval=FALSE}
-kartsim_capture("capture/test")
+kartsim_capture("capture/test", circuit = 3)
 ```
 
 ## Training using the CIFAR model
@@ -42,39 +42,13 @@ or in `cloudml` runnning:
 cloudml::cloudml_train("models/tf-cifar.R")
 ```
 
-use `tfdeploy` to validate that predictions over the trained model work by running:
-
-```{r eval=F}
-tfdeploy::predict_savedmodel(list(array(0, c(32,32,3))))
-```
-```
-$predictions
-                  output
-1 0.3322, 0.3316, 0.3363
-```
-
-Notice that `predict_savedmodel()` initializes a tensorflow session for each
-prediction, which takes too long:
-
-```{r eval=F}
-system.time(
-  tfdeploy::predict_savedmodel(list(array(0, c(32,32,3))))
-)
-```
-```
-   user  system elapsed 
-  2.007   0.045   2.027 
-```
-
-Instead, we can preload the model and predict over a `graph` object as follows:
+Next we will preload the model and predict over a `graph` object as follows:
 
 ```{r eval=F}
 sess <- tensorflow::tf$Session()
-graph <- tfdeploy::load_savedmodel(sess)
+graph <- tfdeploy::load_savedmodel(sess, "savedmodel")
 
-system.time(
-  tfdeploy::predict_savedmodel(list(array(0, c(32,32,3))), graph, type = "graph", sess = sess)
-)
+tfdeploy::predict_savedmodel(list(array(0, c(32,32,3))), graph, type = "graph", sess = sess)
 ```
 ```
    user  system elapsed 
@@ -88,10 +62,10 @@ kartsim::kartsim_control(function(image, direction) {
   labels <- c("left", "forward", "right")
   input <- array(png::readPNG(image), c(32,32,3))
   result <- tfdeploy::predict_savedmodel(input, graph, type = "graph", sess = sess)
-  scores <- result$predictions$activation[[1]]
+  scores <- result$predictions[[1]]$activation
 
-  labels[which(scores == max(scores))]
-})
+  labels[which(scores == max(scores))][[1]]
+}, circuit = 3)
 ```
 
 ```
@@ -117,8 +91,8 @@ graph <- tfdeploy::load_savedmodel(sess, "savedmodel/")
 tfdeploy::predict_savedmodel(
   list(
     list(
-      input = array(0, c(32,32,3)),
-      previous = array(c(0,1,0), c(3))
+      conv2d_1_input = array(0, c(32,32,3)),
+      previous = 0
     )
   ),
   graph,
@@ -136,7 +110,7 @@ We can apply this control policy as follows:
 
 ```{r eval=F}
 
-previous <- c(0,0,0)
+previous <- 0
 control_cifar_prev <- function(image, direction) {
   labels <- c("left", "forward", "right")
   input <- array(png::readPNG(image), c(32,32,3))
@@ -144,21 +118,18 @@ control_cifar_prev <- function(image, direction) {
   result <- tfdeploy::predict_savedmodel(
     list(
       list(
-        input = input,
-        previous = array(previous, c(3))
+        conv2d_1_input = input,
+        previous = previous
       )
     ),
     graph, type = "graph", sess = sess)
   
   message(result)
   
-  scores <- result$predictions$activation[[1]]
-  direction <- which(scores == max(scores))
-  
-  previous <<- array(c(0,0,0), c(3))
-  previous[direction] <<- 1
+  angle <- result$predictions$activation[[1]]
+  previous <<- angle
 
-  labels[direction]
+  angle
 }
 
 kartsim::kartsim_control(control_cifar_prev)
