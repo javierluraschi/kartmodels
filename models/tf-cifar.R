@@ -1,7 +1,6 @@
 library(keras)
 library(tfruns)
 
-backend()$set_learning_phase(TRUE)
 model <- keras_model_sequential()
 
 model %>%
@@ -78,8 +77,8 @@ model %>% fit_generator(
     classes = classes,
     batch_size = batch_size,
     target_size = c(32, 32)),
-  steps_per_epoch = as.integer(length(dir(train_path, recursive = T)) / batch_size),
-  epochs = 2,
+  steps_per_epoch = max(1, as.integer(length(dir(train_path, recursive = T)) / batch_size)),
+  epochs = 20,
   validation_data = flow_images_from_directory(
     test_path,
     classes = classes,
